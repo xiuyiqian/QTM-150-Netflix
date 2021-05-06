@@ -1,0 +1,213 @@
+---
+title: "final project"
+author: "Xiuyi Qian"
+date: "11/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(kableExtra)
+```
+
+```{r,,message=FALSE, warning=FALSE}
+knitr::include_graphics("wallpaper.jpg")
+```
+
+
+```{r,,message=FALSE, warning=FALSE}
+mov<- read.csv("D:/Emory/QTM150/final/MOVIES.csv")
+```
+
+# summary of the data 
+```{r}
+mov$year <-as.numeric(mov$year)
+mov$genre <- as.factor(mov$genre)
+str(mov)
+summary(mov)
+head(mov,5)
+
+levels(mov$genre)
+# genre
+summary(factor(mov$genre))
+# score
+summary(mov$score)
+# year
+summary(mov$year)
+```
+The dataset provides many data about all kinds of properties of movies, and we are especially interested in investigating the relationship between a movie’s quality and its production cost. Intuitively, we assume that the more money spent in movie production, the higher the quality would be. However, we should be careful not to compare movies made in different centuries and of different genres together, otherwise it would render the result not exactly fair.
+
+
+# 1: clean the data 
+we choose the numerical vector of score and budget here as our first and second numerical response variable. The goal is to find out the relationship between score and the budget.
+```{r,message=FALSE, warning=FALSE}
+after_2000 <-mov%>%filter(year>=2000, budget>0,!is.na(budget))
+mov_three_genres_after_2000 <- subset(after_2000, genre=="Action"|genre=="Comedy"|genre=="Drama")
+
+quantile(mov_three_genres_after_2000$budget,na.rm = TRUE)
+quantile(mov_three_genres_after_2000$score,na.rm = TRUE)
+```
+ After understanding the dataset, we chose to only look at the movies that are a) made in the 21st century, b) have scores higher or equal to 6.4(50% quantile), and c) in the top three popular genres (action, comedy, and drama). In this way, our inquiry would be more fair and concentrated.
+ 
+# 2: score: response variable
+We choose the variable “score” as the response of our research, because the score is an indicator of the audience’s opinion about the movie, namely, the quality of the movie.
+
+## 2.1: select the data
+```{r}
+after_2000_high_score <-subset(mov_three_genres_after_2000,score >=6.4)
+after_2000_high_score %>%summarise(budget_mean = mean(budget,na.rm = TRUE),score_mean = mean(score,na.rm=TRUE))
+
+```
+ 
+
+```{r,message=FALSE, warning=FALSE}
+##movies after the 50 percent of high score according to the quantile function based on score variable
+sum_2000 <-after_2000_high_score %>% summarise(average_score=mean(score,na.rm = TRUE),average_budget=mean(budget,na.rm = TRUE),lowest_score=min(score),highest_score=max(score),lowest_budget=min(budget),highest_budget=max(budget),sd_score = sd(score),sd_budget = sd(budget),median_score = median(score),median_budget = median(budget),median_score = median(score))
+
+kable(sum_2000)%>% kable_styling(bootstrap_options = c("striped", "hover"),   full_width = F)
+summary(after_2000_high_score)
+summary(as.factor(after_2000_high_score$genre))
+```
+
+
+## 2.2: frequency or density of score and year distribution
+```{r,message=FALSE, warning=FALSE}
+table(after_2000_high_score$year)
+
+ggplot(after_2000_high_score, aes(x=score)) +
+  geom_boxplot() +
+  labs(x="budget", y="frequency", title="Figure 1: score boxplot")
+
+ggplot(after_2000_high_score, aes(x=score)) +
+geom_histogram(aes(y =..density.., fill=..count..), bins=20, alpha = .8)+  
+   geom_density(col="green") + 
+labs(title="Figure 2: The density of Scores for 2000-2016 Action, Comedy & Drama Movies with Scores >=  6.4")+ 
+   theme(plot.title = element_text(hjust = 0.5))
+
+
+table(after_2000$year)
+```
+
+# 3: analysis from the graph
+We find no very unusual observations in the graphs. There are 3 outliers on the right for having extraordinary scores, but those aren’t statistical faults. There’s also no NA values in this variable.
+
+
+
+
+# 4: budget as explanatory variable
+We chose the variable “budget” as the explanatory variable, because it reflects the amount of investment and resources that the movie had. Generally, when a piece work has more recourses and support during the production process, it will be more polished and have a better quality, compared to its poorly-made counterparts.
+
+```{r,message=FALSE, warning=FALSE}
+budget <- after_2000_high_score$budget
+summary(budget)
+sd(budget)
+
+ggplot(after_2000_high_score, aes(x = budget))+
+  geom_histogram(bins = 50, fill = "black", col = "white")+
+  theme(text = element_text(size = 7))+
+  labs(x = "Budget", y = "Frequency", title = "The Frequency of Budgets for 2000-2016 : Scores >=6.4")
+
+ggplot(after_2000_high_score, aes(x = budget))+
+  geom_boxplot()+
+  theme(text = element_text(size = 7))+
+  labs(x = "Budget", title = "Graph of Budgets for 2000-2016 Action, Comedy & Drama Movies with Scores Above or Equal to 6.4")
+```
+
+# 5: graphing of the data with budget as explanatory variable
+```{r,message=FALSE, warning=FALSE}
+sum(budget == "0")  
+sum(budget == NA) 
+```
+
+There are three outliers. all of budget has values and there is no NA value.
+
+
+# 6 : Assumption of correlation between score and budget
+We expect to see a positive correlation between the explanatory and the response variables, since generally as the budget of the movie increases, the production and marketing of the movies will be more elavated, and the quality of the movie will be better. More specifically, we also expect that the general positive correlation could be reversed or not as obvious in specific years.
+
+# 7:graph of the correlation between score and budget 
+```{r,message=FALSE, warning=FALSE}
+ggplot(data=after_2000_high_score, mapping=aes(x=budget,y=score, color=year)) +
+  geom_point(alpha=0.5)+
+  geom_smooth(method='lm')+
+  ylab("Budget") + xlab("SCORE after 2000")+
+  ggtitle("Correlation between score and budget with high score") +
+   theme(plot.title = element_text(hjust = 0.5)) 
+
+ggplot(data=after_2000_high_score, mapping=aes(x=budget,y=score, color=year)) +
+  geom_point(alpha=0.5)+
+  geom_smooth(method='lm')+
+  ylab("Budget") + xlab("SCORE after 2000")+
+  ggtitle("Correlation between score and budget") +
+   theme(plot.title = element_text(hjust = 0.5)) +
+   facet_wrap(~year)
+
+##find the coefficient between two budget and year
+cor(after_2000_high_score$budget,after_2000_high_score$score)
+```
+
+# 8:conclusion
+To our surprise, the trend is not as positive as we assumed as correlation only shows a value of 0.04. It is slightly positive when we look at the general trend for all of the movies in the 16 years. However, when we look at the small graphs sorted by years, we notice obvious negative correlation in the year of 2000, 2004, 2006 and 2007, while the rest of the graph shows relative positive correlation.The result shows to us that the budget of a movie doesn’t necessarily guarantee its score before 2007. After Stepping into the age of 2010's, the high input of budget gradually promises the raise of the quantity of the movies.
+
+
+
+# Part B
+1. In Part A, we observed an overall relationship between two variables. Choose another variable (make sure it's a categorical variable) that can help you investigate this relationship more specifically. This is going to be your secondary explanatory variable. Which variable did you choose? Be sure to provide your rationale for choosing your secondary explanatory variable.
+
+
+We choose the variable of genre. As Action, Comedy & Drama are three main categories occupying the biggest proportion of the genre variables in the original dataset.
+
+2.
+Using the two explanatory variables, provide a summary table of the outcome using group_by(), arrange(), and summarize() functions. 
+```{r,message=FALSE, warning=FALSE}
+sum_2000_2 <-after_2000_high_score %>%group_by(genre)%>%arrange(score)%>% summarise(average_score=mean(score,na.rm = TRUE),average_budget=mean(budget,na.rm = TRUE),lowest_score=min(score),highest_score=max(score),lowest_budget=min(budget),highest_budget=max(budget),sd_score = sd(score),sd_budget = sd(budget),median_score = median(score),median_budget = median(budget),median_score = median(score))
+
+kable(sum_2000_2)%>% kable_styling(bootstrap_options = c("striped", "hover"),   full_width = F)
+```
+
+
+3  Produce an appropriate plot using all three variables. Make sure all of your variables (at least 3) are clearly displayed in the plot. 
+```{r,message=FALSE, warning=FALSE}
+ggplot(data=after_2000_high_score, mapping=aes(x=budget,y=score, color=genre)) +
+  geom_point(alpha=0.5)+
+  geom_smooth(method='lm')+
+  ylab("Budget") + xlab("SCORE after 2000")+
+  ggtitle("B1: Correlation between score and budget with high score seperated by three main genres") +
+   theme(plot.title = element_text(hjust = 0.5)) 
+```
+5. Examine your plot again and describe in what ways you can improve it. Here, you can either exclude certain observations/categories, or create a new categorical variable by recoding the categories of the existing variable. Note that you need to clearly justify your actions either way. In other words, why do you think it's necessary to do so, and how do you think your plot will be improved by doing so? 
+
+
+6. Produce another plot reflecting the modifications you made in Question 5. Describe the plot again. Be sure to specifically describe how this plot is different from the previous one.
+```{r,message=FALSE, warning=FALSE}
+ggplot(data=after_2000_high_score, mapping=aes(x=budget,y=score,color=rating)) +
+  geom_point(alpha=0.5)+
+  geom_smooth(method='lm')+
+  ylab("Budget") + xlab("SCORE after 2000")+
+  ggtitle("B2: Correlation between score and budget with high score seperated by three main genres") +
+   theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~genre)
+```
+7.Choose another explanatory variable (This can be either categorical or numerical). You can either substitute your secondary explanatory variable (i.e., the variable you chose in Question B-1) with this one or add this variable as a fourth variable in your analysis. Explain why you chose this variable to be used with (or instead of) your secondary explanatory variable.
+```{r,message=FALSE, warning=FALSE}
+after_2000_high_score<-after_2000_high_score[!is.na(after_2000_high_score$rating),]
+after_2000_high_score$rating <- as.factor(after_2000_high_score$rating)
+levels(after_2000_high_score$rating)
+after_2000_high_score <-subset(after_2000_high_score,after_2000_high_score$rating!="UNRATED"|after_2000_high_score$rating!="Not specified"|after_2000_high_score$rating!= "NOT RATED")
+
+ggplot(data=after_2000_high_score, mapping=aes(x=budget,y=score,color=genre,shape=rating)) +
+  geom_point(alpha=0.5)+
+  geom_smooth(method='lm')+
+  ylab("Budget") + xlab("SCORE after 2000")+
+  ggtitle("B2: Correlation between score and budget with high score seperated by three main genres") +
+   theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~genre)
+```
+8.Generate another summary table and plot using all of the variables you chose. Describe how this plot looks different from the previous ones.
+```{r,message=FALSE, warning=FALSE}
+sum_2000_3 <-after_2000_high_score %>%group_by(genre,rating)%>%arrange(score)%>% summarise(average_score=mean(score,na.rm = TRUE),average_budget=mean(budget,na.rm = TRUE),lowest_score=min(score),highest_score=max(score),lowest_budget=min(budget),highest_budget=max(budget),sd_score = sd(score),sd_budget = sd(budget),median_score = median(score),median_budget = median(budget),median_score = median(score))
+
+kable(sum_2000_3)%>% kable_styling(bootstrap_options = c("striped", "hover"),   full_width = F)
+```
+
